@@ -1,14 +1,10 @@
 .DS_Store
 ._*
-
 __pycache__/
 *.pyc
 .venv/
 venv/
 .env
-
-data/raw/*
-data/processed/*
 models/*
 *.zip
 *.gz
@@ -17,8 +13,7 @@ models/*
 *.pkl
 *.bin
 *.vec
-*.txt
-
-!data/raw/.gitkeep
-!data/processed/.gitkeep
 !models/.gitkeep
+!datasets/**/*.txt
+!datasets/**/*.csv
+!datasets/**/*.dataset
