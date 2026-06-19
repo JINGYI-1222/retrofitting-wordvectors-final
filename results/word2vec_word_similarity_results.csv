@@ -1,0 +1,5 @@
+combo,dataset,original_rho,retrofitted_rho,delta,covered_pairs,total_pairs
+Word2Vec+WN_syn,WS-353,0.6962,0.6328,-0.0634,341,353
+Word2Vec+WN_syn,RG-65,0.7608,0.7676,0.0069,65,65
+Word2Vec+WN_all,WS-353,0.6962,0.668,-0.0282,341,353
+Word2Vec+WN_all,RG-65,0.7608,0.8816,0.1208,65,65

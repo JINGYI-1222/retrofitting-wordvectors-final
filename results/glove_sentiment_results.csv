@@ -1,0 +1,4 @@
+combo,accuracy,original_accuracy,delta
+GloVe+WN_syn,0.7833,0.7798,0.0034
+GloVe+WN_all,0.7626,0.7798,-0.0172
+GloVe+PPDB,0.7638,0.7798,-0.0161

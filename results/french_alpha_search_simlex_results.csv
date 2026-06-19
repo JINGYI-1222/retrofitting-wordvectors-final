@@ -1,0 +1,10 @@
+alpha,beta_strategy,dataset,original_rho,retrofitted_rho,delta,covered_pairs,total_pairs,runtime_seconds
+0.111,inverse_degree,French_SimLex,0.3206,0.2765,-0.0441,908,999,16.03
+0.25,inverse_degree,French_SimLex,0.3206,0.3094,-0.0112,908,999,11.33
+0.429,inverse_degree,French_SimLex,0.3206,0.3321,0.0114,908,999,11.24
+0.667,inverse_degree,French_SimLex,0.3206,0.3445,0.0239,908,999,11.65
+1.0,inverse_degree,French_SimLex,0.3206,0.3525,0.0319,908,999,11.12
+1.5,inverse_degree,French_SimLex,0.3206,0.355,0.0344,908,999,11.2
+2.333,inverse_degree,French_SimLex,0.3206,0.3552,0.0346,908,999,11.48
+4.0,inverse_degree,French_SimLex,0.3206,0.3485,0.0279,908,999,11.4
+9.0,inverse_degree,French_SimLex,0.3206,0.3373,0.0166,908,999,11.17

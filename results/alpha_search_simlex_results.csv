@@ -1,0 +1,10 @@
+alpha,beta_strategy,dataset,original_rho,retrofitted_rho,delta,covered_pairs,total_pairs,runtime_seconds
+0.111,inverse_degree,SimLex-999,0.3705,0.3902,0.0197,999,999,37.84
+0.25,inverse_degree,SimLex-999,0.3705,0.4451,0.0746,999,999,56.6
+0.429,inverse_degree,SimLex-999,0.3705,0.4576,0.0871,999,999,69.07
+0.667,inverse_degree,SimLex-999,0.3705,0.4543,0.0838,999,999,70.19
+1.0,inverse_degree,SimLex-999,0.3705,0.4455,0.075,999,999,68.11
+1.5,inverse_degree,SimLex-999,0.3705,0.4335,0.063,999,999,69.27
+2.333,inverse_degree,SimLex-999,0.3705,0.4194,0.0489,999,999,40.32
+4.0,inverse_degree,SimLex-999,0.3705,0.4042,0.0337,999,999,73.33
+9.0,inverse_degree,SimLex-999,0.3705,0.3877,0.0172,999,999,66.7
