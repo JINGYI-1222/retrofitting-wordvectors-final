@@ -1,384 +1,345 @@
-# Retrofitting Word Vectors
+# Retrofitting Word Vectors with Semantic Resources
 
-This project reproduces the retrofitting method from Faruqui et al. (2015).
+This project reimplements the retrofitting method proposed by Faruqui et al. (2015), *Retrofitting Word Vectors to Semantic Lexicons*. The goal is to improve static word embeddings by injecting information from semantic lexical resources such as WordNet, PPDB, and WOLF.
 
-## Data processing Structure
+The main idea is that a retrofitted word vector should stay close to its original pretrained vector while also becoming closer to semantically related words in a lexical graph.
 
-```text
-project/
-├── README.md                         # project overview and running commands
-│
-├── src/
-│   ├── utils.py                      # load/save embeddings, cosine similarity
-│   └── preprocessing.py              # build semantic graphs and filter OOV words
-│
-├── prepare_wordnet.py                # English GloVe + WordNet
-├── prepare_PPDB.py                   # English GloVe + PPDB
-├── prepare_french.py                 # French fastText + WOLF
-├── download_french_resources.py      # download French fastText and WOLF
-│
-├── models/
-│   ├── glove.6B.300d.txt             # English pretrained embeddings
-│   └── cc.fr.300.vec                 # French pretrained embeddings
-│
-└── datasets/
-    ├── ppdb/
-    │   └── ppdb-xl.txt               # English paraphrase lexicon
-    └── wolf/
-        └── wolf-1.0b4.xml            # French WordNet lexical resource
-```
+## Method
 
-`models/` contains pretrained word embeddings.
-
-`datasets/` contains semantic lexical resources.
-
-## Data Loading and Preprocessing
-
-This part prepares the data objects used by the retrofitting algorithm:
-
-```python
-embeddings: dict[str, np.ndarray]
-graph: dict[str, set[str]]
-```
-
-`embeddings` stores the original pretrained word vectors.
-
-`graph` stores the semantic neighbors from WordNet, WOLF, or PPDB.
-
-## Current Data Combinations
-
-English:
+Given an original embedding matrix and a semantic graph, each word vector is updated iteratively according to:
 
 ```text
-GloVe 6B 300d + English WordNet synonyms
-GloVe 6B 300d + English WordNet synonyms + hypernyms + hyponyms
-GloVe 6B 300d + PPDB
+q_i = (alpha_i * qhat_i + sum_j beta_ij * q_j)
+      / (alpha_i + sum_j beta_ij)
 ```
 
-French:
+where:
+
+- `qhat_i` is the original pretrained vector of word `i`;
+- `q_i` is the retrofitted vector;
+- `q_j` are the vectors of semantic neighbors of word `i`;
+- `alpha_i` controls how strongly the model keeps the original vector;
+- `beta_ij` controls how strongly the model trusts each semantic neighbor.
+
+The implementation uses synchronous iterative updates: at each iteration, all new vectors are computed from the vectors of the previous iteration. This optimizes the same retrofitting objective while making the update process deterministic and easy to inspect.
+
+## Project Structure
 
 ```text
-French fastText 300d + WOLF synonyms
-French fastText 300d + WOLF synonyms + hypernym links
+retrofitting-wordvectors-final/
+├── README.md
+├── src/                         # core algorithm and alpha search scripts
+│   ├── retrofit.py
+│   ├── preprocessing.py
+│   ├── utils.py
+│   ├── run_english_alpha_search.py
+│   └── run_french_alpha_search.py
+├── resources_prepa/             # preparation scripts for semantic resources and embeddings
+│   ├── prepare_wordnet.py
+│   ├── prepare_PPDB.py
+│   ├── prepare_french.py
+│   ├── prepare_word2vec.py
+│   ├── download_word2vec.py
+│   └── download_french_resources.py
+├── evaluation/                  # evaluation scripts for similarity and sentiment tasks
+│   ├── eval_utils.py
+│   ├── run_glove_word_similarity.py
+│   ├── run_word2vec_word_similarity.py
+│   ├── run_french_word_similarity.py
+│   ├── run_glove_sentiment.py
+│   ├── run_word2vec_sentiment.py
+│   └── run_viz_best_combos.py
+├── datasets/                    # evaluation datasets and semantic lexicons
+│   ├── en-simlex.txt
+│   ├── en-ws353.csv
+│   ├── en_rg65.txt
+│   ├── fr-simlex.dataset
+│   ├── fr-ws353.dataset
+│   ├── fr_rg65.txt
+│   ├── ppdb/
+│   │   └── ppdb-xl.txt
+│   └── wolf/
+│       └── wolf-1.0b4.xml
+├── models/                      # original pretrained word embeddings
+│   ├── glove.6B.300d.txt
+│   ├── GoogleNews-vectors-negative300.bin.gz
+│   └── cc.fr.300.vec
+└── results/                     # experimental outputs, result tables, and figures
+    ├── *_results.csv
+    ├── *_bar.png
+    └── *_curve.png
 ```
 
-## Files
+## Main Modules
 
-```text
-src/utils.py                  # load/save embeddings, cosine similarity
-src/preprocessing.py          # build semantic graphs and filter OOV words
+### Core implementation
 
-prepare_wordnet.py            # English GloVe + WordNet
-prepare_PPDB.py               # English GloVe + PPDB
-download_french_resources.py  # download French fastText + WOLF
-prepare_french.py             # French fastText + WOLF
-```
+- `src/retrofit.py`: implements the retrofitting algorithm.
+- `src/preprocessing.py`: builds semantic graphs from WordNet, PPDB, and WOLF; filters out-of-vocabulary nodes.
+- `src/utils.py`: loads embeddings, saves embeddings, and computes cosine similarity.
 
-## Data Sources
+### Resource preparation
 
-English GloVe:
+- `resources_prepa/prepare_wordnet.py`: prepares English WordNet graphs.
+- `resources_prepa/prepare_PPDB.py`: prepares PPDB lexical paraphrase graphs.
+- `resources_prepa/prepare_french.py`: prepares French WOLF graphs.
+- `resources_prepa/download_french_resources.py`: downloads French fastText and WOLF resources.
+- `resources_prepa/download_word2vec.py`: downloads or prepares GoogleNews Word2Vec vectors.
 
-[Stanford GloVe project page](https://nlp.stanford.edu/projects/glove/)
+### Evaluation
 
-Use:
+- `evaluation/eval_utils.py`: shared utilities for word similarity evaluation.
+- `evaluation/run_glove_word_similarity.py`: evaluates GloVe vectors on English word similarity datasets.
+- `evaluation/run_word2vec_word_similarity.py`: evaluates Word2Vec vectors on English word similarity datasets.
+- `evaluation/run_french_word_similarity.py`: evaluates French fastText vectors on French word similarity datasets.
+- `evaluation/run_glove_sentiment.py`: evaluates GloVe vectors on SST-2 sentiment classification.
+- `evaluation/run_word2vec_sentiment.py`: evaluates Word2Vec vectors on SST-2 sentiment classification.
+- `evaluation/run_viz_best_combos.py`: creates summary visualizations.
 
-```text
-Wikipedia 2014 + Gigaword 5
-glove.6B.300d.txt
-```
+## Data
 
-Place it at:
+### Source links
 
-```text
-models/glove.6B.300d.txt
-```
+The main resources used in this project are:
 
-French fastText:
+| Resource | Link |
+|---|---|
+| GloVe 6B embeddings | https://nlp.stanford.edu/projects/glove/ |
+| GoogleNews Word2Vec | https://code.google.com/archive/p/word2vec/ |
+| fastText French vectors | https://fasttext.cc/docs/en/crawl-vectors.html |
+| WOLF French WordNet | https://almanach.inria.fr/software_and_resources/downloads/wolf-1.0b4.xml.bz2 |
+| PPDB | https://github.com/mfaruqui/retrofitting/tree/master/lexicons |
+| English WordNet | https://wordnet.princeton.edu/ |
+| Stanford Sentiment Treebank / SST-2 | https://nlp.stanford.edu/sentiment/ |
+| WordSim-353 | http://alfonseca.org/eng/research/wordsim353.html |
+| SimLex-999 | https://fh295.github.io/simlex.html |
+| RG-65 multilingual datasets | https://www.site.uottawa.ca/~mjoub063/wordsims.htm |
+| French multilingual word-pair datasets | https://github.com/siabar/Multilingual_Wordpairs |
 
-[fastText word vectors for 157 languages](https://fasttext.cc/docs/en/crawl-vectors.html)
+### Pretrained embeddings
 
-The download script prepares:
+The project uses the following pretrained static embeddings:
 
-```text
-models/cc.fr.300.vec
-```
+| File | Description |
+|---|---|
+| `models/glove.6B.300d.txt` | English GloVe 6B, 300 dimensions |
+| `models/GoogleNews-vectors-negative300.bin.gz` | English GoogleNews Word2Vec, 300 dimensions |
+| `models/cc.fr.300.vec` | French fastText, 300 dimensions |
 
-French WOLF:
+Large embedding files are stored in `models/`.
 
-[WOLF French WordNet](https://almanach.inria.fr/software_and_resources/downloads/wolf-1.0b4.xml.bz2)
+### Semantic resources
 
-The download script prepares:
+| File | Description |
+|---|---|
+| `datasets/ppdb/ppdb-xl.txt` | English PPDB lexical paraphrases |
+| `datasets/wolf/wolf-1.0b4.xml` | WOLF, a French WordNet-like lexical resource |
+| NLTK WordNet | English WordNet, loaded through `nltk.corpus.wordnet` |
 
-```text
-datasets/wolf/wolf-1.0b4.xml
-```
+### Evaluation datasets
 
-PPDB:
+| File | Language | Dataset |
+|---|---|---|
+| `datasets/en-ws353.csv` | English | WordSim-353 |
+| `datasets/en-simlex.txt` | English | SimLex-999 |
+| `datasets/en_rg65.txt` | English | RG-65 |
+| `datasets/fr-ws353.dataset` | French | French WordSim-353 |
+| `datasets/fr-simlex.dataset` | French | French SimLex |
+| `datasets/fr_rg65.txt` | French | French RG-65 |
 
-Place the PPDB file at:
-
-```text
-datasets/ppdb/ppdb-xl.txt
-```
-
-Folder convention:
-
-```text
-models/    pretrained word embeddings
-datasets/  semantic lexical resources
-```
-
-Large resource files are not uploaded to GitHub.
+The French word-pair evaluation datasets are taken from the `siabar/Multilingual_Wordpairs` repository.
 
 ## OOV Handling
 
-The same OOV strategy is used for WordNet, WOLF, and PPDB.
+Semantic lexicons often contain words that are not present in the pretrained embedding vocabulary. Since retrofitting requires an initial vector for every updated word, these out-of-vocabulary words cannot be updated directly.
 
-Some words appear in a semantic lexicon but do not have a pretrained vector. Since retrofitting needs an initial vector for each updated word, these words cannot be directly updated.
+The project uses the following strategy:
 
-We therefore:
+1. Build the raw semantic graph from the lexical resource.
+2. Keep only graph nodes that exist in the embedding vocabulary.
+3. Remove edges connected to words without pretrained vectors.
+4. Remove graph nodes with no remaining valid neighbors.
 
-- build the raw semantic graph;
-- keep only words that appear in the embedding vocabulary;
-- remove edges connected to words without pretrained vectors;
-- remove graph nodes that have no remaining neighbors.
+This creates a usable graph aligned with the embedding vocabulary.
 
-This gives a usable graph aligned with the embedding vocabulary.
+## Usage
 
-## Run
+Run commands from the project root:
+
+```bash
+cd /path/to/retrofitting-wordvectors-final
+```
+
+### Prepare semantic graphs
 
 English WordNet synonyms:
 
 ```bash
-python3 prepare_wordnet.py --relations syn
+python3 resources_prepa/prepare_wordnet.py --relations syn
 ```
 
-English WordNet all:
+English WordNet synonyms, hypernyms, and hyponyms:
 
 ```bash
-python3 prepare_wordnet.py --relations all
+python3 resources_prepa/prepare_wordnet.py --relations all
 ```
 
 English PPDB:
 
 ```bash
-python3 prepare_PPDB.py
-```
-
-Download French resources:
-
-```bash
-python3 download_french_resources.py
+python3 resources_prepa/prepare_PPDB.py
 ```
 
 French WOLF synonyms:
 
 ```bash
-python3 prepare_french.py --relations syn
+python3 resources_prepa/prepare_french.py --relations syn
 ```
 
-French WOLF all:
+French WOLF with hypernym links:
 
 ```bash
-python3 prepare_french.py --relations all
+python3 resources_prepa/prepare_french.py --relations all
 ```
 
-(option)For quick tests, add:
+For quick tests, add:
 
 ```bash
 --max-words 50000
 ```
 
-----------------------------07/06/2025_update------------------------------
+### Search alpha
 
-## Core Retrofitting Implementation
-
-The current pipeline uses:
-
-- GloVe 6B 300-dimensional English embeddings;
-- an English WordNet graph;
-- synonym relations only for the current baseline;
-- vocabulary filtering before retrofitting;
-- synchronous iterative vector updates.
-
-### Team Responsibilities
-
-- Person A: loads GloVe embeddings, constructs the WordNet graph, and filters the graph by the embedding vocabulary.
-- Person B: implements and verifies the core retrofitting algorithm.
-- Person C / the group: conducts later evaluation and comparison between original and retrofitted embeddings.
-
-### Person B Interface
-
-python from src.retrofit import retrofit_vectors  retrofitted_vectors, stats = retrofit_vectors(     original_vectors,     graph,     num_iters=10,     alpha=1.0,     beta_strategy="inverse_degree", ) 
-
-Expected inputs:
-
-python original_vectors: dict[str, np.ndarray] graph: dict[str, Collection[str]] 
-
-Returned outputs:
-
-python retrofitted_vectors: dict[str, np.ndarray] stats: dict[str, int] 
-
-The returned statistics include:
-
-- oov_neighbours_skipped
-- words_with_no_valid_neighbours
-- words_updated
-- words_unchanged
-
-### Implementation Properties
-
-The current implementation:
-
-- uses synchronous updates;
-- reads neighbour vectors only from the previous iteration;
-- does not modify the original input vectors in place;
-- skips out-of-vocabulary neighbours;
-- leaves words without valid neighbours unchanged;
-- supports neighbour collections such as set[str];
-- uses inverse-degree neighbour weighting;
-- preserves the complete input vocabulary and vector dimensions.
-
-### Tests
-
-Run the test suite from the project root:
-
-bash cd ~/Desktop/nlp-retrofitting-project .venv/bin/python -m pytest 
-
-Current verified result:
-
-text 7 passed 
-
-The tests cover:
-
-1. semantic neighbours become closer;
-2. isolated words remain unchanged;
-3. original vectors are not modified;
-4. out-of-vocabulary neighbours are skipped;
-5. updates are synchronous;
-6. inverse-degree weighting works with multiple neighbours;
-7. graph neighbour values may be stored as sets.
-
-### Real-Data Integration
-
-The real-data integration runner is:
-
-text scripts/04_run_wn_syn_retrofit.py 
-
-Example:
-
-bash .venv/bin/python scripts/04_run_wn_syn_retrofit.py \   --max-words 1000 \   --num-iters 1 
-
-The script:
-
-- loads a configurable prefix of the GloVe file;
-- builds a WordNet synonym graph;
-- filters the graph by the embedding vocabulary;
-- calls the core retrofitting implementation;
-- verifies vocabulary and dimensional consistency;
-- checks that sampled original vectors were not modified;
-- checks that all input and output vectors contain only finite values;
-- prints deterministic sample diagnostics and runtime information.
-
-### Verified Configurations
-
-The following configurations have completed successfully:
-
-| Vocabulary | Iterations | Graph nodes | Undirected edges | Result |
-|---:|---:|---:|---:|---|
-| 1,000 | 1 | 595 | 1,232 | Passed |
-| 1,000 | 10 | 595 | 1,232 | Passed |
-| 50,000 | 1 | 25,616 | 80,232 | Passed |
-| 50,000 | 10 | 25,616 | 80,232 | Passed |
-
-For the 50,000-word, 10-iteration run:
-
-text words updated: 25,616 words unchanged: 24,384 all input vectors finite: passed all output vectors finite: passed peak memory: approximately 1.10 GB 
-
-These runs verify implementation correctness, numerical stability, and scalability at the tested sizes. They do not yet demonstrate that retrofitting improves embedding quality.
-
-### Data Setup
-
-The pretrained GloVe file is not included in this repository.
-
-Place the following file at:
-
-text models/glove.6B.300d.txt 
-
-The current source is GloVe 6B, trained on Wikipedia 2014 and Gigaword 5, with 300-dimensional uncased vectors.
-
-The current WordNet configuration is:
-
-text include_synonyms=True include_hypernyms=False include_hyponyms=False 
-
-
----
-
-## PART C. Evaluation
-
-This module evaluates the quality of original and retrofitted word vectors.
-
-### Files
-
-```text
-src/eval.py        # word similarity evaluation: WS-353, SimLex-999, RG-65
-src/eval_sst.py    # sentiment analysis evaluation: SST-2 (auto-downloaded from HuggingFace)
-datasets/combined.csv      # WS-353 (353 word pairs, human similarity scores)
-datasets/SimLex-999.txt    # SimLex-999 (999 word pairs, semantic similarity)
-datasets/rg65.txt          # RG-65 (65 word pairs, Rubenstein & Goodenough 1965)
-```
-
-### Evaluation Datasets
-
-| Dataset | Pairs | Score range | Focus |
-|---------|-------|-------------|-------|
-| WS-353 | 353 | 0–10 | General word relatedness |
-| SimLex-999 | 999 | 0–10 | Semantic similarity only |
-| RG-65 | 65 | 0–4 | Classic semantic similarity benchmark |
-| SST-2 | 67,349 train / 872 val | binary | Sentiment classification |
-
-### Word Similarity Evaluation
-
-For each dataset, we compute cosine similarity between word pairs using both original and retrofitted vectors, then measure Spearman rho correlation with human-annotated scores.
-
-Run:
+English alpha search on SimLex:
 
 ```bash
-python src/eval.py
+python3 src/run_english_alpha_search.py
 ```
 
-Results (GloVe 6B 300d, 50,000 words, 10 iterations, WordNet synonyms):
-
-| Dataset | Original GloVe | Retrofitted | Δ |
-|---------|---------------|-------------|---|
-| WS-353 | 0.631 | 0.645 | +0.014 |
-| SimLex-999 | 0.372 | 0.443 | +0.071 |
-| RG-65 | 0.793 | 0.820 | +0.027 |
-
-### Sentiment Analysis Evaluation
-
-Sentences are represented as the average of their word vectors. A logistic regression classifier is trained on SST-2 and evaluated on the validation set.
-
-Run:
+French alpha search on French SimLex:
 
 ```bash
-python src/eval_sst.py
+python3 src/run_french_alpha_search.py
 ```
 
-Results:
+### Run word similarity evaluation
 
-| | Accuracy |
-|--|----------|
-| Original GloVe | 76.61% |
-| Retrofitted | 78.21% |
-| Improvement | +1.60% |
+English GloVe:
 
-### Coverage
+```bash
+python3 evaluation/run_glove_word_similarity.py
+```
 
-We load the first 50,000 words from GloVe. Coverage on evaluation datasets:
+English Word2Vec:
 
-- WS-353: 348/353 (98.6%)
-- SimLex-999: 995/999 (99.6%)
-- RG-65: 61/65 (93.8%)
+```bash
+python3 evaluation/run_word2vec_word_similarity.py
+```
 
-Missing pairs are skipped; results remain reliable.
+French fastText:
+
+```bash
+python3 evaluation/run_french_word_similarity.py
+```
+
+### Run sentiment evaluation
+
+GloVe on SST-2:
+
+```bash
+python3 evaluation/run_glove_sentiment.py
+```
+
+Word2Vec on SST-2:
+
+```bash
+python3 evaluation/run_word2vec_sentiment.py
+```
+
+## Current Experimental Settings
+
+The main experiments use:
+
+- `num_iters = 10`;
+- `beta_strategy = "inverse_degree"`;
+- English best alpha: `0.429`, selected on English SimLex;
+- French best alpha: `2.333`, selected on French SimLex;
+- English resources: WordNet synonyms, WordNet all relations, PPDB;
+- French resource: WOLF.
+
+## Results
+
+### Alpha search
+
+English GloVe with WordNet synonyms on SimLex:
+
+| Alpha | Original rho | Retrofitted rho | Delta |
+|---:|---:|---:|---:|
+| 0.111 | 0.3705 | 0.3902 | +0.0197 |
+| 0.250 | 0.3705 | 0.4451 | +0.0746 |
+| 0.429 | 0.3705 | 0.4576 | +0.0871 |
+| 0.667 | 0.3705 | 0.4543 | +0.0838 |
+| 1.000 | 0.3705 | 0.4455 | +0.0750 |
+
+French fastText with WOLF synonyms on French SimLex:
+
+| Alpha | Original rho | Retrofitted rho | Delta |
+|---:|---:|---:|---:|
+| 0.429 | 0.3206 | 0.3321 | +0.0114 |
+| 0.667 | 0.3206 | 0.3445 | +0.0239 |
+| 1.000 | 0.3206 | 0.3525 | +0.0319 |
+| 1.500 | 0.3206 | 0.3550 | +0.0344 |
+| 2.333 | 0.3206 | 0.3552 | +0.0346 |
+
+### Word similarity
+
+English GloVe:
+
+| Combination | Dataset | Original rho | Retrofitted rho | Delta |
+|---|---|---:|---:|---:|
+| GloVe + WN_syn | WS-353 | 0.6085 | 0.6084 | -0.0001 |
+| GloVe + WN_syn | RG-65 | 0.7695 | 0.7773 | +0.0078 |
+| GloVe + WN_all | WS-353 | 0.6085 | 0.6050 | -0.0036 |
+| GloVe + WN_all | RG-65 | 0.7695 | 0.8744 | +0.1048 |
+| GloVe + PPDB | WS-353 | 0.6085 | 0.5330 | -0.0756 |
+| GloVe + PPDB | RG-65 | 0.7695 | 0.8074 | +0.0379 |
+
+English Word2Vec:
+
+| Combination | Dataset | Original rho | Retrofitted rho | Delta |
+|---|---|---:|---:|---:|
+| Word2Vec + WN_syn | WS-353 | 0.6962 | 0.6328 | -0.0634 |
+| Word2Vec + WN_syn | RG-65 | 0.7608 | 0.7676 | +0.0069 |
+| Word2Vec + WN_all | WS-353 | 0.6962 | 0.6680 | -0.0282 |
+| Word2Vec + WN_all | RG-65 | 0.7608 | 0.8816 | +0.1208 |
+
+French fastText:
+
+| Combination | Dataset | Original rho | Retrofitted rho | Delta |
+|---|---|---:|---:|---:|
+| fastText + WOLF_syn | WS-353_FR | 0.5328 | 0.5033 | -0.0295 |
+| fastText + WOLF_syn | RG-65_FR | 0.8258 | 0.8377 | +0.0119 |
+| fastText + WOLF_all | WS-353_FR | 0.5328 | 0.4988 | -0.0340 |
+| fastText + WOLF_all | RG-65_FR | 0.8258 | 0.8500 | +0.0242 |
+
+### Sentiment classification
+
+SST-2 is evaluated with sentence vectors obtained by averaging word vectors and training a logistic regression classifier.
+
+| Combination | Original accuracy | Retrofitted accuracy | Delta |
+|---|---:|---:|---:|
+| GloVe + WN_syn | 0.7798 | 0.7833 | +0.0034 |
+| GloVe + WN_all | 0.7798 | 0.7626 | -0.0172 |
+| GloVe + PPDB | 0.7798 | 0.7638 | -0.0161 |
+| Word2Vec + WN_syn | 0.7982 | 0.7982 | +0.0000 |
+| Word2Vec + WN_all | 0.7982 | 0.7993 | +0.0011 |
+
+## Interpretation
+
+The results show that retrofitting is most useful for datasets that measure semantic similarity, especially RG-65 and SimLex-style evaluations. Performance on WS-353 can decrease because WS-353 includes broader topical relatedness, not only strict functional similarity. Sentiment classification also does not always improve, since averaging static word vectors is a simple sentence representation and the semantic graph is not directly optimized for sentiment.
+
+Overall, the implementation reproduces the main behavior described by Faruqui et al. (2015): semantic lexicons can improve static word vectors when the evaluation task benefits from synonymy, hypernymy, or related lexical information.
+
+## Reference
+
+Faruqui, M., Dodge, J., Jauhar, S. K., Dyer, C., Hovy, E., and Smith, N. A. (2015). *Retrofitting Word Vectors to Semantic Lexicons*.
