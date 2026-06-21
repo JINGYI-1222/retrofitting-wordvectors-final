@@ -97,7 +97,7 @@ def main():
     log()
 
     log("=== Loading SimLex-999 ===")
-    simlex = load_simlex(PROJECT_ROOT / "datasets/SimLex-999.txt")
+    simlex = load_simlex(PROJECT_ROOT / "datasets/en-simlex.txt")
 
     log("=== Evaluating original GloVe baseline on SimLex-999 ===")
     original_result = evaluate_with_coverage(embeddings, simlex)
