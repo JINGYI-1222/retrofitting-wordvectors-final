@@ -106,8 +106,8 @@ def main():
 
     print("=== Loading evaluation datasets ===")
     datasets = {
-        "WS-353": load_ws353(PROJECT_ROOT / "datasets/combined.csv"),
-        "RG-65":  load_rg65(PROJECT_ROOT  / "datasets/rg65.txt"),
+        "WS-353": load_ws353(PROJECT_ROOT / "datasets/en-ws353.csv"),
+        "RG-65":  load_rg65(PROJECT_ROOT  / "datasets/en_rg65.txt"),
     }
 
     print("\nLoading GloVe...")
