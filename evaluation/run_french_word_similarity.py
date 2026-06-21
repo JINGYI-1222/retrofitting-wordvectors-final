@@ -25,7 +25,7 @@ MAX_WORDS = 300000
 FASTTEXT_PATH = PROJECT_ROOT / "models/cc.fr.300.vec"
 WOLF_PATH     = PROJECT_ROOT / "datasets/wolf/wolf-1.0b4.xml"
 FR_WS353_PATH = PROJECT_ROOT / "datasets/fr-ws353.dataset"
-RG65_FR_PATH  = PROJECT_ROOT / "datasets/rg65_french.txt"
+RG65_FR_PATH  = PROJECT_ROOT / "datasets/fr_rg65.txt"
 
 RESULTS_DIR = PROJECT_ROOT / "results"
 OUTPUT_CSV  = RESULTS_DIR / "french_word_similarity_results.csv"
